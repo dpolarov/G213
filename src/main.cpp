@@ -1,5 +1,3 @@
-#define UNICODE
-#define _UNICODE
 #include <windows.h>
 #include <setupapi.h>
 #include <hidsdi.h>
@@ -12,7 +10,7 @@
 #pragma comment(lib, "hid.lib")
 #pragma comment(lib, "advapi32.lib")
 
-static const USHORT VID=0x046D, PID=0xC336, UP=0xFF43, USAGE=0x0602;
+static const USHORT VID=0x046D, PID=0xC336, HID_USAGE_PAGE_VALUE=0xFF43, HID_USAGE_VALUE=0x0602;
 static const BYTE R=0x3E, G=0x31, B=0x00;
 
 static bool startup_mode(){
@@ -57,7 +55,7 @@ static bool set_color(std::wstring& why){
         PHIDP_PREPARSED_DATA pp=nullptr; HIDP_CAPS caps{};
         if(!HidD_GetPreparsedData(h,&pp)){ CloseHandle(h); continue; }
         NTSTATUS st=HidP_GetCaps(pp,&caps); HidD_FreePreparsedData(pp);
-        if(st!=HIDP_STATUS_SUCCESS || caps.UsagePage!=UP || caps.Usage!=USAGE){ CloseHandle(h); continue; }
+        if(st!=HIDP_STATUS_SUCCESS || caps.UsagePage!=HID_USAGE_PAGE_VALUE || caps.Usage!=HID_USAGE_VALUE){ CloseHandle(h); continue; }
         sawUsage=true;
         BYTE p[20]={0x11,0xFF,0x0C,0x3A,0x00,0x01,R,G,B,0x02,0,0,0,0,0,0,0,0,0,0};
         DWORD wr=0; BOOL ok=WriteFile(h,p,sizeof(p),&wr,nullptr);
