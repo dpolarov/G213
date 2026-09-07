@@ -1,0 +1,36 @@
+name: Build Windows x64
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build
+        shell: cmd
+        run: >-
+          cl /nologo /std:c++17 /O2 /EHsc /DUNICODE /D_UNICODE
+          src\main.cpp
+          /link /SUBSYSTEM:WINDOWS /OUT:G213Color.exe setupapi.lib hid.lib advapi32.lib shell32.lib
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: G213Color-windows-x64
+          path: G213Color.exe
+          if-no-files-found: error
