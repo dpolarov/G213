@@ -26,7 +26,7 @@ jobs:
         run: >-
           cl /nologo /std:c++17 /O2 /EHsc /DUNICODE /D_UNICODE
           src\main.cpp
-          /link /SUBSYSTEM:WINDOWS /OUT:G213Color.exe setupapi.lib hid.lib advapi32.lib shell32.lib
+          /link /SUBSYSTEM:WINDOWS /OUT:G213Color.exe setupapi.lib hid.lib advapi32.lib shell32.lib user32.lib
 
       - name: Upload executable
         uses: actions/upload-artifact@v4
