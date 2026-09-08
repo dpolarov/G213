@@ -10,8 +10,34 @@
 #pragma comment(lib, "hid.lib")
 #pragma comment(lib, "advapi32.lib")
 
-static const USHORT VID=0x046D, PID=0xC336, HID_USAGE_PAGE_VALUE=0xFF43, HID_USAGE_VALUE=0x0602;
-static const BYTE R=0x3E, G=0x31, B=0x00;
+// ============================================================================
+// USER SETTINGS
+// ============================================================================
+// Base RGB color, 0..255 for each channel.
+// Current value: #3E3100 (dim warm amber/yellow before brightness scaling).
+static const BYTE COLOR_R = 62;
+static const BYTE COLOR_G = 49;
+static const BYTE COLOR_B = 0;
+
+// Overall brightness in percent, 0..100.
+// The G213 static-color command has no separate brightness field, so brightness
+// is applied by scaling the RGB values before they are sent to the keyboard.
+// 100 = full configured RGB color, 50 = half intensity, 0 = off.
+static const int BRIGHTNESS_PERCENT = 100;
+// ============================================================================
+
+// Logitech G213 HID identifiers. Normally these should not be changed.
+static const USHORT VID = 0x046D;
+static const USHORT PID = 0xC336;
+static const USHORT HID_USAGE_PAGE_VALUE = 0xFF43;
+static const USHORT HID_USAGE_VALUE = 0x0602;
+
+static BYTE scaled_channel(BYTE value){
+    int brightness = BRIGHTNESS_PERCENT;
+    if(brightness < 0) brightness = 0;
+    if(brightness > 100) brightness = 100;
+    return static_cast<BYTE>((static_cast<int>(value) * brightness + 50) / 100);
+}
 
 static bool startup_mode(){
     int n=0; LPWSTR* a=CommandLineToArgvW(GetCommandLineW(),&n); bool r=false;
@@ -57,7 +83,11 @@ static bool set_color(std::wstring& why){
         NTSTATUS st=HidP_GetCaps(pp,&caps); HidD_FreePreparsedData(pp);
         if(st!=HIDP_STATUS_SUCCESS || caps.UsagePage!=HID_USAGE_PAGE_VALUE || caps.Usage!=HID_USAGE_VALUE){ CloseHandle(h); continue; }
         sawUsage=true;
-        BYTE p[20]={0x11,0xFF,0x0C,0x3A,0x00,0x01,R,G,B,0x02,0,0,0,0,0,0,0,0,0,0};
+
+        const BYTE r = scaled_channel(COLOR_R);
+        const BYTE g = scaled_channel(COLOR_G);
+        const BYTE b = scaled_channel(COLOR_B);
+        BYTE p[20]={0x11,0xFF,0x0C,0x3A,0x00,0x01,r,g,b,0x02,0,0,0,0,0,0,0,0,0,0};
         DWORD wr=0; BOOL ok=WriteFile(h,p,sizeof(p),&wr,nullptr);
         CloseHandle(h); SetupDiDestroyDeviceInfoList(ds);
         if(ok && wr==sizeof(p)) return true;
@@ -77,7 +107,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     int tries=startup?12:1;
     for(int i=0;i<tries && !ok;i++){ ok=set_color(err); if(!ok && startup) Sleep(1000); }
     if(!startup){
-        if(ok && installed) MessageBoxW(nullptr,L"Color #3E3100 applied.\nInstalled in %LOCALAPPDATA%\\G213Color and added to startup.",L"G213Color",MB_OK|MB_ICONINFORMATION);
+        if(ok && installed) MessageBoxW(nullptr,L"Configured color applied.\nInstalled in %LOCALAPPDATA%\\G213Color and added to startup.",L"G213Color",MB_OK|MB_ICONINFORMATION);
         else { std::wstring m=L"Setup was not fully successful.\n\n"; if(!ok)m+=err+L"\n"; if(!installed)m+=L"Could not install autostart.\n"; MessageBoxW(nullptr,m.c_str(),L"G213Color",MB_OK|MB_ICONERROR); }
     }
     return ok&&installed?0:1;
