@@ -3,6 +3,7 @@ name: Build Windows x64
 on:
   push:
     branches: [ main ]
+    tags: ['v*']
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -31,6 +32,29 @@ jobs:
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: G213Color-windows-x64
           path: G213Color.exe
           if-no-files-found: error
+
+  release:
+    name: Publish tagged executable to Releases
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: G213Color-windows-x64
+          path: release-dist
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -s release-dist/G213Color.exe
+          gh release create "$GITHUB_REF_NAME" release-dist/G213Color.exe \
+            --title "G213 Color $GITHUB_REF_NAME" --generate-notes
